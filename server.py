@@ -75,6 +75,7 @@ class Blockchain:
         return True
 
     def add_node(self, username):
+<<<<<<< HEAD
         added = False
         if username == "":
             response = {
@@ -82,6 +83,9 @@ class Blockchain:
                 "added": added
             }
         elif self.nodes.get(username, "None") == "None":
+=======
+        if self.nodes.get(username, "None") == "None":
+>>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
             mnemonic = r.random_words(count=10)
             mnemonic = str(mnemonic).translate(
                 str.maketrans('', '', string.punctuation))
@@ -89,6 +93,7 @@ class Blockchain:
                 "address": str(uuid1()).replace('-', ''),
                 "balance": 500,
                 "password": mnemonic,
+<<<<<<< HEAD
                 "notifications": [],
                 "active": True
             }
@@ -212,8 +217,16 @@ def add_node():
     response = blockchain.add_node(json['username'])
 
     return jsonify(response), 201
+=======
+                "notifications": []
+            }
+            return mnemonic
+>>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
 
+        else:
+            return "Username already exists. Try another."
 
+<<<<<<< HEAD
 @ app.route('/api/transact', methods=['POST'])
 def transact():
     json = request.get_json()
@@ -221,6 +234,13 @@ def transact():
         json['transaction'], json['password'])
     return jsonify(response), 201
 
+=======
+    def add_transaction(self, transaction):
+        my_txn = {"Sender": transaction.sender, "Recipient": transaction.receiver,
+                  "Amount": transaction.amount, "Fee": transaction.fee}
+
+        self.mycol.insert_one(my_txn)
+>>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
 
 @ app.route('/api/getstatus', methods=['POST'])
 def getstatus():
@@ -228,6 +248,7 @@ def getstatus():
     response = blockchain.getstatus(json["username"])
     return jsonify(response), 201
 
+<<<<<<< HEAD
 
 @ app.route('/api/getbalance', methods=['POST'])
 def getbalance():
@@ -272,5 +293,19 @@ def rejecttxn():
         json['noti'], json['password'])
     return jsonify(response), 201
 
+=======
+app = Flask(__name__)
+
+blockchain = Blockchain()
+
+
+@ app.route('/api/add_node', methods=['POST'])
+def add_node():
+    json = request.get_json()
+    response = blockchain.add_node(json['username'])
+
+    return jsonify(response), 201
+
+>>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
 
 app.run(host='0.0.0.0', port=5000)
