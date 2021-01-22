@@ -1,8 +1,7 @@
 import imagePath from './components/images/olala.png'
-
 import axios from 'axios'
 import './App.css';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import Home from './components/Home';
 import NavbarComponent from './components/NavbarComponent';
 import {BrowserRouter, Route, Redirect, Switch} from 'react-router-dom';
@@ -13,11 +12,38 @@ import Profile from './components/Profile';
 import Notifications from './components/Notifications';
 
 function App() {
-  const [username, setusername] = useState("");
-  const [balance, setbalance] = useState(500);
+  const [username, setusername] = useState(localStorage.getItem( 'username' ) || "");
+  const [balance, setbalance] = useState(localStorage.getItem( 'balance' ) || 500);
+  const [status, setstatus] = useState(localStorage.getItem( 'status' ) || false)
+  var user={
+    username: username
+  }
+
+  const CancelToken = axios.CancelToken;
+  const source = CancelToken.source();
+
+  useEffect(() => {
+    axios.post("/api/getstatus",user, {cancelToken: source.token})
+    .then(res => {
+      setstatus(res.data)
+      console.log(status)
+    })
+    .catch(err => {
+      if (axios.isCancel(err)) {
+        console.log('Request canceled', err.message);
+      }
+      else console.log(err)
+    })
+
+    return () => {
+        source.cancel()
+    }
+  }, [])
+
+
   const home = () => {
     return(
-       <Home username={username} setusername={setusername}/>
+       <Home />
     );
   }
   const mine = () => {
@@ -27,7 +53,7 @@ function App() {
   }
   const addTransaction = () => {
     return(
-      <AddTransaction />
+      <AddTransaction username = {username} status = {status}/>
     );
   }
   const viewNetwork = () => {
@@ -37,19 +63,23 @@ function App() {
   }
   const profile = () => {
     return(
-      <Profile />
+      <Profile balance={balance} setbalance={setbalance} username = {username}/>
     );
   }
   const notifications = () => {
     return(
-      <Notifications />
+      <Notifications username = {username}/>
     );
   }
 
-  return (
-    <div className="App" style={{backgroundImage: `url(${imagePath})`}}>
-      
+  
 
+  
+
+  return (
+    // <div className="App" style={{backgroundImage: `url(${imagePath})`}}>
+      <div className="App">
+        <NavbarComponent username={username} setusername={setusername} status={status} />
         <BrowserRouter>
           <Switch>
             <Route path="/home" component={home} />
@@ -58,11 +88,13 @@ function App() {
             <Route path="/viewNetwork" component={viewNetwork} />
             <Route path="/profile" component={profile} />
             <Route path="/notifications" component={notifications} />
+
             <Redirect to="/home" />
           </Switch>
 
         </BrowserRouter>
-    </div>
+        
+      </div>
   );
 }
 

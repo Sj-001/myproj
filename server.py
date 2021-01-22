@@ -9,31 +9,32 @@
 import datetime
 import hashlib
 import json
+import string
 from flask import Flask, jsonify, request
 import requests
 import pymongo
-from uuid import uuid4
+from uuid import uuid1
 from urllib.parse import urlparse
-
-
-# Part 1 - Building a Blockchain
+from random_words import RandomWords
+r = RandomWords()
 
 
 class Blockchain:
 
     def __init__(self):
+        self.myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+        self.mydb = self.myclient["mempool"]
+        self.mycol = self.mydb["transactions"]
         self.chain = []
-        self.transactions = []
-        self.create_block(proof=1, previous_hash='0')
-        self.nodes = set()
+        self.create_block(proof=1, previous_hash='0', transactions=[])
+        self.nodes = dict()
 
-    def create_block(self, proof, previous_hash):
+    def create_block(self, proof, previous_hash, transactions):
         block = {'index': len(self.chain) + 1,
                  'timestamp': str(datetime.datetime.now()),
                  'proof': proof,
                  'previous_hash': previous_hash,
-                 'transactions': self.transactions}
-        self.transactions = []
+                 'transactions': transactions}
         self.chain.append(block)
         return block
 
@@ -73,135 +74,203 @@ class Blockchain:
             block_index += 1
         return True
 
-    def add_transaction(self, sender, receiver, amount):
-        self.transactions.append({'sender': sender,
-                                  'receiver': receiver,
-                                  'amount': amount})
-        previous_block = self.get_previous_block()
-        return previous_block['index'] + 1
+    def add_node(self, username):
+        added = False
+        if username == "":
+            response = {
+                "result": "Enter username",
+                "added": added
+            }
+        elif self.nodes.get(username, "None") == "None":
+            mnemonic = r.random_words(count=10)
+            mnemonic = str(mnemonic).translate(
+                str.maketrans('', '', string.punctuation))
+            self.nodes[username] = {
+                "address": str(uuid1()).replace('-', ''),
+                "balance": 500,
+                "password": mnemonic,
+                "notifications": [],
+                "active": True
+            }
+            added = True
+            response = {
+                "result": mnemonic,
+                "added": added
+            }
 
-    def add_node(self, address):
-        parsed_url = urlparse(address)
-        self.nodes.add(parsed_url.netloc)
+        else:
+            response = {
+                "result": "Username already exists. Try another.",
+                "added": added
+            }
+        return response
 
-    def replace_chain(self):
-        network = self.nodes
-        longest_chain = None
-        max_length = len(self.chain)
-        for node in network:
-            response = requests.get(f'http://{node}/get_chain')
-            if response.status_code == 200:
-                length = response.json()['length']
-                chain = response.json()['chain']
-                if length > max_length and self.is_chain_valid(chain):
-                    max_length = length
-                    longest_chain = chain
-        if longest_chain:
-            self.chain = longest_chain
-            return True
-        return False
+    def add_transaction(self, transaction):
+        my_txn = {"Sender": transaction["sender"], "Recipient": transaction["recepient"],
+                  "Amount": transaction["amount"], "Fee": transaction["fee"]}
 
-# Part 2 - Mining our Blockchain
+        self.mycol.insert_one(my_txn)
+
+    def transact(self, transaction, password):
+        if self.nodes.get(transaction["recipient"], "None") == "None":
+            return "Invalid Recipient"
+        if self.nodes[transaction["sender"]]["password"] != password:
+            return "Wrong Password"
+        if self.nodes[transaction["sender"]]["balance"] < int(transaction["amount"]) + int(transaction["fee"]):
+            return "Not enough coins!"
+        noti = {
+            "id": len(self.nodes[transaction["recipient"]]["notifications"]) + 1,
+            "info": transaction
+        }
+        self.nodes[transaction["recipient"]
+                   ]["notifications"].append(noti)
+        return "Transaction initiated!"
+
+    def accept_transaction(self, noti, password):
+        if self.nodes[noti["info"]["recipient"]]["password"] != password:
+            return "Wrong password"
+        self.nodes[noti["info"]["sender"]
+                   ]["balance"] -= int(noti["info"]["amount"])
+        self.nodes[noti["info"]["recipient"]
+                   ]["balance"] += int(noti["info"]["amount"])
+        self.add_transaction(noti["info"])
+        self.nodes[noti["info"]["recipient"]
+                   ]["notifications"].remove(noti)
+        return "Transaction Completed!"
+
+    def reject_transaction(self, noti, password):
+        if self.nodes[noti["info"]["recipient"]]["password"] != password:
+            return "Wrong password"
+        self.nodes[noti["info"]["recipient"]
+                   ]["notifications"].remove(noti)
+        return "Rejected"
+
+    def login(self, username, KeyPhrase):
+        if username == "":
+            response = {
+                "result": "Enter username",
+                "loggedin": False
+            }
+        if KeyPhrase == "":
+            response = {
+                "result": "Enter Key Phrase",
+                "loggedin": False
+            }
+        elif self.nodes.get(username, "None") == "None":
+            response = {
+                "result": "Username doesn't exist.",
+                "loggedin": False
+            }
+        elif self.nodes[username]["active"]:
+            response = {
+                "result": "Already logged in on some device.",
+                "loggedin": False
+            }
+        elif self.nodes.get(username, "None") != "None" and KeyPhrase != self.nodes[username]["password"]:
+            response = {
+                "result": "Wrong Key Phrase.",
+                "loggedin": False
+            }
+        else:
+            self.nodes[username]["active"] = True
+            response = {
+                "result": "Log In Successful.",
+                "loggedin": True
+            }
+        return response
+
+    def logout(self, username):
+        if self.nodes.get(username, "None") == "None":
+            return "Username doesn't exist"
+        self.nodes[username]["active"] = False
+        return "Logged out!"
+
+    def getstatus(self, username):
+        if self.nodes.get(username, "None") == "None":
+            return False
+        return self.nodes[username]["active"]
+
+    def getbalance(self, username):
+        if self.nodes.get(username, "None") == "None":
+            return -1
+        return self.nodes[username]["balance"]
+
+    def getnoti(self, username):
+        if self.nodes.get(username, "None") == "None":
+            return []
+        return self.nodes[username]["notifications"]
 
 
-# Creating a Web App
 app = Flask(__name__)
 
-# Creating an address for the node on Port 5001
-node_address = str(uuid4()).replace('-', '')
-
-# Creating a Blockchain
 blockchain = Blockchain()
 
-# Mining a new block
 
-
-@app.route('/mine_block', methods=['GET'])
-def mine_block():
-    previous_block = blockchain.get_previous_block()
-    previous_proof = previous_block['proof']
-    proof = blockchain.proof_of_work(previous_proof)
-    previous_hash = blockchain.hash(previous_block)
-    blockchain.add_transaction(
-        sender=node_address, receiver='Hadelin', amount=1)
-    block = blockchain.create_block(proof, previous_hash)
-    response = {'message': 'Congratulations, you just mined a block!',
-                'index': block['index'],
-                'timestamp': block['timestamp'],
-                'proof': block['proof'],
-                'previous_hash': block['previous_hash'],
-                'transactions': block['transactions']}
-    return jsonify(response), 200
-
-# Getting the full Blockchain
-
-
-@app.route('/get_chain', methods=['GET'])
-def get_chain():
-    response = {
-        'chain': blockchain.chain,
-        'length': len(blockchain.chain)
-    }
-    return jsonify(response), 200
-
-# Checking if the Blockchain is valid
-
-
-@app.route('/is_valid', methods=['GET'])
-def is_valid():
-    is_valid = blockchain.is_chain_valid(blockchain.chain)
-    if is_valid:
-        response = {'message': 'All good. The Blockchain is valid.'}
-    else:
-        response = {
-            'message': 'Houston, we have a problem. The Blockchain is not valid.'}
-    return jsonify(response), 200
-
-# Adding a new transaction to the Blockchain
-
-
-@app.route('/add_transaction', methods=['POST'])
-def add_transaction():
+@ app.route('/api/add_node', methods=['POST'])
+def add_node():
     json = request.get_json()
-    transaction_keys = ['sender', 'receiver', 'amount']
-    if not all(key in json for key in transaction_keys):
-        return 'Some elements of the transaction are missing', 400
-    index = blockchain.add_transaction(
-        json['sender'], json['receiver'], json['amount'])
-    response = {'message': f'This transaction will be added to Block {index}'}
+    response = blockchain.add_node(json['username'])
+
     return jsonify(response), 201
 
-# Part 3 - Decentralizing our Blockchain
 
-# Connecting new nodes
-
-
-@app.route('/connect_node', methods=['POST'])
-def connect_node():
+@ app.route('/api/transact', methods=['POST'])
+def transact():
     json = request.get_json()
-    nodes = json.get('nodes')
-    if nodes is None:
-        return "No node", 400
-    for node in nodes:
-        blockchain.add_node(node)
-    response = {'message': 'All the nodes are now connected. The Hadcoin Blockchain now contains the following nodes:',
-                'total_nodes': list(blockchain.nodes)}
+    response = blockchain.transact(
+        json['transaction'], json['password'])
     return jsonify(response), 201
 
-# Replacing the chain by the longest chain if needed
+
+@ app.route('/api/getstatus', methods=['POST'])
+def getstatus():
+    json = request.get_json()
+    response = blockchain.getstatus(json["username"])
+    return jsonify(response), 201
 
 
-@app.route('/replace_chain', methods=['GET'])
-def replace_chain():
-    is_chain_replaced = blockchain.replace_chain()
-    if is_chain_replaced:
-        response = {'message': 'The nodes had different chains so the chain was replaced by the longest one.',
-                    'new_chain': blockchain.chain}
-    else:
-        response = {'message': 'All good. The chain is the largest one.',
-                    'actual_chain': blockchain.chain}
-    return jsonify(response), 200
+@ app.route('/api/getbalance', methods=['POST'])
+def getbalance():
+    json = request.get_json()
+    response = blockchain.getbalance(json["username"])
+    return jsonify(response), 201
 
 
-# Running the app
-app.run(host='0.0.0.0', port=5001)
+@ app.route('/api/login', methods=['POST'])
+def login():
+    json = request.get_json()
+    response = blockchain.login(json['username'], json['KeyPhrase'])
+    return jsonify(response), 201
+
+
+@ app.route('/api/logout', methods=['POST'])
+def logout():
+    json = request.get_json()
+    response = blockchain.logout(json['username'])
+    return jsonify(response), 201
+
+
+@ app.route('/api/getnoti', methods=['POST'])
+def getnoti():
+    json = request.get_json()
+    response = blockchain.getnoti(json['username'])
+    return jsonify(response), 201
+
+
+@ app.route('/api/accepttxn', methods=['POST'])
+def accepttxn():
+    json = request.get_json()
+    response = blockchain.accept_transaction(
+        json['noti'], json['password'])
+    return jsonify(response), 201
+
+
+@ app.route('/api/rejecttxn', methods=['POST'])
+def rejecttxn():
+    json = request.get_json()
+    response = blockchain.reject_transaction(
+        json['noti'], json['password'])
+    return jsonify(response), 201
+
+
+app.run(host='0.0.0.0', port=5000)
