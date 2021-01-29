@@ -41,6 +41,11 @@ function AddTransaction({username, status}) {
     else{
       setresponse("Login to transact.")
     }
+    setamount(0);
+    setfee(0);
+    setmessage("");
+    setpassword("");
+    setrecipient("");
   }
   return (
     <div>

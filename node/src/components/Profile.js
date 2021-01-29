@@ -2,34 +2,28 @@ import React, { useEffect } from 'react';
 import NavbarComponent from './NavbarComponent';
 import axios from 'axios';
 
-function Profile({balance, setbalance, username}) {
+function Profile({balance, setbalance, username, status}) {
   var user = {
     username: username
   }
-  const CancelToken = axios.CancelToken;
-  const source = CancelToken.source();
+  
   useEffect(() => {
-    axios.post('/api/getbalance', user, {cancelToken: source.token})
+    axios.post('/api/getbalance', user)
     .then(res => {
       setbalance(res.data)
       console.log(balance)
     })
     .catch(err => {
-      if (axios.isCancel(err)) {
-        console.log('Request canceled', err.message);
-      }
-      else console.log(err)
+      console.log(err)
     })
 
-    return () => {
-        source.cancel()
-    }
-  }, [balance])
+   
+  }, [])
 
   return (
     <div>
       <h1>My Profile</h1>
-      <p>{balance}</p>
+      {status ? <p>{balance}</p>: <p>Login First</p> }
     </div>
   );
 }

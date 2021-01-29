@@ -19,25 +19,19 @@ function App() {
     username: username
   }
 
-  const CancelToken = axios.CancelToken;
-  const source = CancelToken.source();
+  
 
   useEffect(() => {
-    axios.post("/api/getstatus",user, {cancelToken: source.token})
+    axios.post("/api/getstatus",user)
     .then(res => {
       setstatus(res.data)
       console.log(status)
     })
     .catch(err => {
-      if (axios.isCancel(err)) {
-        console.log('Request canceled', err.message);
-      }
-      else console.log(err)
+      console.log(err)
     })
 
-    return () => {
-        source.cancel()
-    }
+   
   }, [])
 
 
@@ -48,7 +42,7 @@ function App() {
   }
   const mine = () => {
     return(
-      <Mine />
+      <Mine status={status}/>
     );
   }
   const addTransaction = () => {
@@ -63,7 +57,7 @@ function App() {
   }
   const profile = () => {
     return(
-      <Profile balance={balance} setbalance={setbalance} username = {username}/>
+      <Profile balance={balance} setbalance={setbalance} username = {username} status={status}/>
     );
   }
   const notifications = () => {

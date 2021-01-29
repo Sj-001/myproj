@@ -4,6 +4,8 @@ import { Navbar, Nav, Form, FormControl, Button, ToggleButton, Collapse, Modal }
 import 'font-awesome/css/font-awesome.css'
 import axios from 'axios'
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import {clearCache} from "clear-cache"
+
 
 
 function NavbarComponent({ username, setusername, status}) {
@@ -59,6 +61,7 @@ function NavbarComponent({ username, setusername, status}) {
     setresponse([])
     handleCloselogin();
     handleClosesignup();
+    clearCache();
   }
   var user2 = {
     username: username,

@@ -16,18 +16,23 @@ import pymongo
 from uuid import uuid1
 from urllib.parse import urlparse
 from random_words import RandomWords
+import time
+
 r = RandomWords()
 
 
 class Blockchain:
 
     def __init__(self):
-        self.myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-        self.mydb = self.myclient["mempool"]
-        self.mycol = self.mydb["transactions"]
+        # self.myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+        # self.mydb = self.myclient["mempool"]
+        # self.mycol = self.mydb["transactions"]
         self.chain = []
-        self.create_block(proof=1, previous_hash='0', transactions=[])
+        genesis_block = self.create_block(
+            proof=1, previous_hash='0', transactions=[])
+        self.chain.append(genesis_block)
         self.nodes = dict()
+        self.mempool = dict()
 
     def create_block(self, proof, previous_hash, transactions):
         block = {'index': len(self.chain) + 1,
@@ -75,7 +80,6 @@ class Blockchain:
         return True
 
     def add_node(self, username):
-<<<<<<< HEAD
         added = False
         if username == "":
             response = {
@@ -83,9 +87,6 @@ class Blockchain:
                 "added": added
             }
         elif self.nodes.get(username, "None") == "None":
-=======
-        if self.nodes.get(username, "None") == "None":
->>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
             mnemonic = r.random_words(count=10)
             mnemonic = str(mnemonic).translate(
                 str.maketrans('', '', string.punctuation))
@@ -93,7 +94,6 @@ class Blockchain:
                 "address": str(uuid1()).replace('-', ''),
                 "balance": 500,
                 "password": mnemonic,
-<<<<<<< HEAD
                 "notifications": [],
                 "active": True
             }
@@ -111,10 +111,10 @@ class Blockchain:
         return response
 
     def add_transaction(self, transaction):
-        my_txn = {"Sender": transaction["sender"], "Recipient": transaction["recepient"],
-                  "Amount": transaction["amount"], "Fee": transaction["fee"]}
-
-        self.mycol.insert_one(my_txn)
+        my_txn = {"sender": transaction["sender"], "recipient": transaction["recipient"], "txn_time": time.time(),
+                  "amount": transaction["amount"], "fee": transaction["fee"]}
+        txn_hash = self.hash(my_txn)
+        self.mempool[txn_hash] = my_txn
 
     def transact(self, transaction, password):
         if self.nodes.get(transaction["recipient"], "None") == "None":
@@ -205,6 +205,9 @@ class Blockchain:
             return []
         return self.nodes[username]["notifications"]
 
+    def get_mempool(self):
+        return self.mempool
+
 
 app = Flask(__name__)
 
@@ -217,16 +220,8 @@ def add_node():
     response = blockchain.add_node(json['username'])
 
     return jsonify(response), 201
-=======
-                "notifications": []
-            }
-            return mnemonic
->>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
 
-        else:
-            return "Username already exists. Try another."
 
-<<<<<<< HEAD
 @ app.route('/api/transact', methods=['POST'])
 def transact():
     json = request.get_json()
@@ -234,13 +229,6 @@ def transact():
         json['transaction'], json['password'])
     return jsonify(response), 201
 
-=======
-    def add_transaction(self, transaction):
-        my_txn = {"Sender": transaction.sender, "Recipient": transaction.receiver,
-                  "Amount": transaction.amount, "Fee": transaction.fee}
-
-        self.mycol.insert_one(my_txn)
->>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
 
 @ app.route('/api/getstatus', methods=['POST'])
 def getstatus():
@@ -248,7 +236,6 @@ def getstatus():
     response = blockchain.getstatus(json["username"])
     return jsonify(response), 201
 
-<<<<<<< HEAD
 
 @ app.route('/api/getbalance', methods=['POST'])
 def getbalance():
@@ -293,19 +280,12 @@ def rejecttxn():
         json['noti'], json['password'])
     return jsonify(response), 201
 
-=======
-app = Flask(__name__)
 
-blockchain = Blockchain()
-
-
-@ app.route('/api/add_node', methods=['POST'])
-def add_node():
-    json = request.get_json()
-    response = blockchain.add_node(json['username'])
-
+@ app.route('/api/get_mempool', methods=['GET'])
+def get_mempool():
+    mempool = blockchain.get_mempool()
+    response = list(mempool.items())
     return jsonify(response), 201
 
->>>>>>> 64e0933d6909e75571be23dcd7c796bd7a9ece6e
 
 app.run(host='0.0.0.0', port=5000)
