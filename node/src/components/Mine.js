@@ -27,11 +27,11 @@ function Mine({status}) {
     return(
       <tr key={index}>
         <td>{txn[0]}</td>
-        <td>{txn[1].sender}</td>
-        <td>{txn[1].recipient}</td>
-        <td>{txn[1].txn_time}</td>
         <td>{txn[1].amount}</td>
         <td>{txn[1].fee}</td>
+        <td>{txn[1].recipient}</td>
+        <td>{txn[1].sender}</td>
+        <td>{txn[1].txn_time}</td>
         <td><input type="checkbox"/></td>
       </tr>
     )

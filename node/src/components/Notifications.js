@@ -27,7 +27,7 @@ function Notifications({username}) {
         .then(res => {
           
           setnotifictions(res.data)
-          // console.log(res.data)
+          console.log(res.data)
         })
         .catch(err => {
           console.log(err)
@@ -39,9 +39,10 @@ function Notifications({username}) {
   }, [])
   
   
-  function accept(noti){
+  function accept(index){
+    console.log(index)
     var param = {
-      noti: noti,
+      noti: notifications[index],
       password: password
     }
     axios.post('/api/accepttxn', param)
@@ -55,9 +56,9 @@ function Notifications({username}) {
   }
 
   
-  function reject(noti){
+  function reject(index){
     var param = {
-      noti: noti,
+      noti: notifications[index],
       password: password
     }
     axios.post('/api/rejecttxn', param)
@@ -72,72 +73,74 @@ function Notifications({username}) {
 
   
 
-  const notis = notifications.map((noti) => {
+  const notis = notifications.map((noti, index) => {
     console.log(noti)
     return(
-      <Card key={noti.id}>
-        <Card.Body>
-          <Card.Text>
-            Sender: {noti.info.sender}
-          </Card.Text>
-          <Card.Text>
-            Amount: {noti.info.amount}
-          </Card.Text>
-          <Card.Text>
-            {noti.info.message ? <div>Message: {noti.info.message}</div> : null}
-          </Card.Text>
-          <Button variant="primary" onClick={()=>{
-            handleShowAccept(); 
-            setresponse([]); 
-            setpassword("");
-            }}>Accept</Button>
-          <div>
-            <Modal show={showAccept} onHide={handleCloseAccept}>
-              <Modal.Header closeButton>
-                <Modal.Title>Enter Password to Proceed</Modal.Title>
-              </Modal.Header>
-              <Modal.Body><input type="password" value={password} onChange={(event) => setpassword(event.target.value)}/></Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => {
-                  handleCloseReject();
-                  clearCache();
-                  }}>
-                  Close
-                </Button>
-                <Button variant="success" onClick={() => {accept(noti)}}>
-                  Proceed to Accept
-                </Button>
-                {response}
-              </Modal.Footer>
-            </Modal>
-          </div>
-          <Button variant="danger" onClick={()=>{
-            handleShowReject();
-            setresponse([]); 
-            setpassword("");
-            }}>Reject</Button>
-          <div>
-            <Modal show={showReject} onHide={handleCloseReject}>
-              <Modal.Header closeButton>
-                <Modal.Title>Enter Password to Proceed</Modal.Title>
-              </Modal.Header>
-              <Modal.Body><input type="password" value={password} onChange={(event) => setpassword(event.target.value)}/></Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => {
-                  handleCloseReject();
-                  clearCache();
-                  }}>
-                  Close
-                </Button>
-                <Button variant="danger" onClick={() => {reject(noti)}}>
-                  Proceed to Reject
-                </Button>
-                {response}
-              </Modal.Footer>
-            </Modal>
-          </div>
-        </Card.Body>
-      </Card>
+      <div>
+        <Card>
+          <Card.Body>
+            <Card.Text>
+              Sender: {noti.info.sender}
+            </Card.Text>
+            <Card.Text>
+              Amount: {noti.info.amount}
+            </Card.Text>
+            <Card.Text>
+              {noti.info.message ? <div>Message: {noti.info.message}</div> : null}
+            </Card.Text>
+            <Button variant="primary" onClick={()=>{
+              handleShowAccept(); 
+              setresponse([]); 
+              setpassword("");
+              }}>Accept</Button>
+            <div>
+              <Modal show={showAccept} onHide={handleCloseAccept}>
+                <Modal.Header closeButton>
+                  <Modal.Title>Enter Password to Proceed</Modal.Title>
+                </Modal.Header>
+                <Modal.Body><input type="password" value={password} onChange={(event) => setpassword(event.target.value)}/></Modal.Body>
+                <Modal.Footer>
+                  <Button variant="secondary" onClick={() => {
+                    handleCloseReject();
+                    clearCache();
+                    }}>
+                    Close
+                  </Button>
+                  <Button variant="success" onClick={() => accept(index)}>
+                    Proceed to Accept
+                  </Button>
+                  {response}
+                </Modal.Footer>
+              </Modal>
+            </div>
+            <Button variant="danger" onClick={()=>{
+              handleShowReject();
+              setresponse([]); 
+              setpassword("");
+              }}>Reject</Button>
+            <div>
+              <Modal show={showReject} onHide={handleCloseReject}>
+                <Modal.Header closeButton>
+                  <Modal.Title>Enter Password to Proceed</Modal.Title>
+                </Modal.Header>
+                <Modal.Body><input type="password" value={password} onChange={(event) => setpassword(event.target.value)}/></Modal.Body>
+                <Modal.Footer>
+                  <Button variant="secondary" onClick={() => {
+                    handleCloseReject();
+                    clearCache();
+                    }}>
+                    Close
+                  </Button>
+                  <Button variant="danger" onClick={() => reject(index)}>
+                    Proceed to Reject
+                  </Button>
+                  {response}
+                </Modal.Footer>
+              </Modal>
+            </div>
+          </Card.Body>
+        </Card>
+      </div>
     )
 
   })
