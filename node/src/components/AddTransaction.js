@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import NavbarComponent from './NavbarComponent';
 import { Form, Button, Modal } from 'react-bootstrap';
 import axios from "axios"
+import { clearCache } from 'clear-cache';
 
 function AddTransaction({username, status}) {
 
@@ -84,26 +85,28 @@ function AddTransaction({username, status}) {
           <Form.Control type="text" placeholder="Message" value={message} onChange={(event) => setmessage(event.target.value)}/>
         </Form.Group>
         
-        <Button variant="primary" type="submit" onClick={handleShow}>
+        <Button variant="primary" onClick={handleShow}>
           Transact
         </Button>
-        <Modal show={showReject} onHide={handleCloseReject}>
-          <Modal.Header closeButton />
+        <Modal show={show} onHide={handleClose}>
+          <Modal.Header closeButton>
+            <Modal.Title>Confirm Transaction</Modal.Title>
+          </Modal.Header>
           <Modal.Body>Recipient: {recipient}</Modal.Body>
           <Modal.Body>Amount: {amount}</Modal.Body>
           <Modal.Body>Message: {message}</Modal.Body>
           <Modal.Body>Fee: {fee}</Modal.Body>
           <Modal.Footer>
-          <Button variant="secondary" onClick={() => {
-            handleClose();
-            clearCache();
-            }}>
-            Close
-          </Button>
-          <Button variant="success" onClick={transact}>
-            Proceed to Transact
-          </Button>
-          {response}
+            <Button variant="secondary" onClick={() => {
+              handleClose();
+              clearCache();
+              }}>
+              Close
+            </Button>
+            <Button variant="success" onClick={transact}>
+              Proceed to Transact
+            </Button>
+            {response}
           </Modal.Footer>
         </Modal>
   

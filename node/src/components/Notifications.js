@@ -74,9 +74,7 @@ function Notifications({username}) {
   
 
   const notis = notifications.map((noti, index) => {
-    console.log(noti)
-    return(
-      <div>
+    return  <div>
         <Card>
           <Card.Body>
             <Card.Text>
@@ -141,7 +139,7 @@ function Notifications({username}) {
           </Card.Body>
         </Card>
       </div>
-    )
+    
 
   })
 
